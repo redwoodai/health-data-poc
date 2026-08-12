@@ -102,11 +102,15 @@ Yanıtlar her zaman gerçek uygulama davranışına göre verilmelidir. Mevcut P
 
 ### Sıradaki uygulanabilir işler
 
-1. **Sandbox regresyon testi:** Epic’in farklı sandbox test hastalarıyla yetkilendirme ve `Patient`/`Observation`/`DiagnosticReport` çağrılarını deneyin. Bu işlem test hesabı gerektirdiği için kullanıcı tarafından yapılmalıdır.
+1. **Sandbox regresyon testi:** Epic’in farklı sandbox test hastalarıyla yetkilendirme ve `Patient`/`Observation`/`DiagnosticReport` çağrılarını deneyin. Bu işlem test hesabı gerektirdiği için kullanıcı tarafından yapılmalıdır. Her testte Dashboard > “Bağlantı ve izin durumu” altında temel scope’ları doğrulayın; genişletilmiş veriler etkinleştirildiyse `Condition`, `AllergyIntolerance` ve `MedicationRequest` scope’larını da doğrulayın.
 2. **Yerel kullanıcı arayüzü:** Tamamlandı. `/dashboard`, JSON yerine laboratuvar adı, değer, birim, tarih ve referans aralığını gösterir; ham FHIR JSON veya token göstermez.
 3. **Ek klinik kaynaklar:** Condition, alerji ve ilaç desteği kodda hazırdır ama varsayılan olarak kapalıdır. Etkinleştirmek için Epic panelinde yalnızca şu R4 Search API’lerini ekleyin: `Condition.Search (Problems) (R4)`, `AllergyIntolerance.Search (Patient Chart) (R4)`, `MedicationRequest.Search (Signed Medication Order) (R4)`. Sandbox senkronizasyonundan sonra `.env` içine `EPIC_ENABLE_EXTENDED_CLINICAL_DATA=true` yazın, sunucuyu yeniden başlatın ve yeniden yetkilendirin. Encounter, Procedure, Immunization ve DocumentReference ileride aynı yöntemle eklenebilir.
 4. **Quest yolu:** Doğrudan hasta API’si doğrulanmadığından portal otomasyonu eklenmez. Epic’e iletilen Quest sonuçları Epic FHIR’den alınır; ileri aşamada kullanıcı tarafından elle indirilen resmî Quest PDF’si için açık rızalı yerel içe aktarma tasarlanabilir.
 5. **Üretim hazırlığı:** HTTPS callback/domain, gizlilik politikası, doğru Data Use Questionnaire, token kasası, şifreli depolama, hesap/MFA, silme-rıza-iptal akışları ve denetim kayıtları olmadan production sağlık verisi işlenmez.
+
+## Public repository automation
+
+GitHub Actions, `main`e yapılan her push ve pull request'te Python 3.11, 3.12 ve 3.13 üzerinde testleri çalıştırır. Dependabot, Python bağımlılıkları ve GitHub Actions sürümleri için aylık güncelleme önerileri açar. Bu otomasyon yalnızca kaynak kodunu ve örnek yapılandırmayı kullanır; `.env` dosyası CI'a gönderilmez.
 
 ### İstenen FHIR kaynakları ve SMART kapsamları
 
