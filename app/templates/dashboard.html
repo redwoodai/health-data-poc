@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Health Vault | Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header>
+        <a class="brand" href="/">My Personal Health Vault</a>
+        <button id="refresh" type="button">Verileri yenile</button>
+      </header>
+      <p class="eyebrow">Epic sandbox • Yerel oturum</p>
+      <details class="connection-details"><summary>Bağlantı ve izin durumu</summary><p>Epic’in bu oturum için verdiği kapsamlar:</p><code>{{ granted_scopes | join(' ') }}</code></details>
+      <section id="status" class="status" aria-live="polite">Veriler yükleniyor…</section>
+      <div id="content" hidden>
+        <section class="patient-card" aria-labelledby="patient-title">
+          <p class="eyebrow">Yetkilendirilmiş hasta</p>
+          <h1 id="patient-title"></h1>
+          <dl>
+            <div><dt>Doğum tarihi</dt><dd id="birth-date">—</dd></div>
+            <div><dt>Cinsiyet</dt><dd id="gender">—</dd></div>
+          </dl>
+        </section>
+        <section class="labs" aria-labelledby="labs-title">
+          <div class="section-heading">
+            <div><p class="eyebrow">Laboratuvar sonuçları</p><h2 id="labs-title">Sonuçlar</h2></div>
+            <p id="report-count" class="muted"></p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Test</th><th>Değer</th><th>Tarih</th><th>Referans aralığı</th></tr></thead>
+              <tbody id="lab-rows"></tbody>
+            </table>
+          </div>
+          <p id="no-labs" class="muted" hidden>Bu yetkilendirme için laboratuvar sonucu bulunamadı.</p>
+        </section>
+        <section id="clinical-sections" class="clinical-grid" hidden>
+          <section class="clinical-card"><p class="eyebrow">Sorunlar</p><h2>Koşullar</h2><ul id="conditions"></ul><p id="no-conditions" class="muted" hidden>Kayıt bulunamadı.</p></section>
+          <section class="clinical-card"><p class="eyebrow">Alerjiler</p><h2>Alerjiler</h2><ul id="allergies"></ul><p id="no-allergies" class="muted" hidden>Kayıt bulunamadı.</p></section>
+          <section class="clinical-card"><p class="eyebrow">İlaçlar</p><h2>İlaçlar</h2><ul id="medications"></ul><p id="no-medications" class="muted" hidden>Kayıt bulunamadı.</p></section>
+        </section>
+      </div>
+      <p class="notice">Kaynak: Epic FHIR sandbox. Bu ekran ham FHIR JSON’u veya erişim tokenlarını göstermez ya da saklamaz.</p>
+    </main>
+    <script>
+      const text = value => value === null || value === undefined || value === "" ? "—" : String(value);
+      const date = value => value ? new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium" }).format(new Date(value)) : "—";
+      const addCell = (row, value) => { const cell = document.createElement("td"); cell.textContent = value; row.append(cell); };
+      function renderClinicalItems(id, emptyId, items) {
+        const list = document.getElementById(id);
+        list.replaceChildren();
+        for (const item of items) {
+          const row = document.createElement("li");
+          const name = document.createElement("strong"); name.textContent = text(item.name);
+          const detail = document.createElement("span");
+          detail.textContent = [item.status, item.detail].filter(Boolean).join(" • ");
+          row.append(name, detail);
+          list.append(row);
+        }
+        document.getElementById(emptyId).hidden = items.length !== 0;
+      }
+      async function loadData() {
+        const status = document.getElementById("status");
+        const content = document.getElementById("content");
+        status.hidden = false;
+        status.className = "status";
+        status.textContent = "Veriler yükleniyor…";
+        content.hidden = true;
+        try {
+          const response = await fetch("/data", { headers: { Accept: "application/json" } });
+          if (response.status === 401) {
+            const body = await response.json();
+            window.location.assign(body.reauthorize_url || "/authorize");
+            return;
+          }
+          if (!response.ok) throw new Error("Veriler alınamadı.");
+          const payload = await response.json();
+          document.getElementById("patient-title").textContent = text(payload.patient.name);
+          document.getElementById("birth-date").textContent = date(payload.patient.birth_date);
+          document.getElementById("gender").textContent = text(payload.patient.gender);
+          document.getElementById("report-count").textContent = `${payload.diagnostic_report_count} laboratuvar raporu bulundu`;
+          const rows = document.getElementById("lab-rows");
+          rows.replaceChildren();
+          for (const lab of payload.labs) {
+            const row = document.createElement("tr");
+            addCell(row, text(lab.name));
+            addCell(row, [lab.value, lab.unit].filter(v => v !== null && v !== undefined && v !== "").join(" ") || "—");
+            addCell(row, date(lab.date));
+            addCell(row, text(lab.reference_range));
+            rows.append(row);
+          }
+          document.getElementById("no-labs").hidden = payload.labs.length !== 0;
+          const extended = payload.extended_clinical_data_enabled;
+          document.getElementById("clinical-sections").hidden = !extended;
+          if (extended) {
+            renderClinicalItems("conditions", "no-conditions", payload.conditions);
+            renderClinicalItems("allergies", "no-allergies", payload.allergies);
+            renderClinicalItems("medications", "no-medications", payload.medications);
+            for (const section of payload.unavailable_sections) {
+              const noData = document.getElementById(`no-${section}`);
+              noData.textContent = "Bu bölüm için Epic erişim izni henüz verilmedi.";
+              noData.hidden = false;
+            }
+          }
+          status.hidden = true;
+          content.hidden = false;
+        } catch (error) {
+          status.className = "status error";
+          status.textContent = "Veriler yüklenemedi. Epic yetkilendirmesini yeniden başlatmayı deneyin.";
+        }
+      }
+      document.getElementById("refresh").addEventListener("click", loadData);
+      loadData();
+    </script>
+  </body>
+</html>

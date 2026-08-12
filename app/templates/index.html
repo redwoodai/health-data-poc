@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Personal Health Vault</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <main class="landing">
+      <p class="eyebrow">Yerel Epic SMART on FHIR PoC</p>
+      <h1>My Personal Health Vault</h1>
+      <p class="lead">Kendi Epic sandbox sağlık verinizi yetkilendirip laboratuvar sonuçlarınızı yerelde görüntüleyin.</p>
+      <a class="button" href="{{ '/dashboard' if authorized else '/authorize' }}">{{ 'Dashboard’u aç' if authorized else 'Epic sandbox’a bağlan' }}</a>
+      <p class="notice">Bu yalnızca yerel bir kanıt uygulamasıdır. Parolanız uygulamaya girilmez; Epic’in yetkilendirme sayfasında oturum açarsınız. Veriler kalıcı olarak saklanmaz.</p>
+    </main>
+  </body>
+</html>
