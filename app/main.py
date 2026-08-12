@@ -69,6 +69,7 @@ def callback():
 
 @app.get("/data")
 def data() -> Response:
+    global token_response
     if not token_response:
         abort(401, "Authorize first at /authorize")
     settings = _settings()

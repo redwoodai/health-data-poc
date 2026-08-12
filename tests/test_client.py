@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 from app.epic.client import EpicFHIRClient, FHIRAuthorizationExpiredError, FHIRPermissionError
+from app.main import app
 
 
 class EpicFHIRClientTests(unittest.TestCase):
@@ -34,3 +35,13 @@ class EpicFHIRClientTests(unittest.TestCase):
         client.session.get = Mock(return_value=response)
         with self.assertRaises(FHIRAuthorizationExpiredError):
             list(client.search("Observation", {"patient": "patient-1"}))
+
+    def test_data_requires_authorization_without_scope_error(self):
+        import app.main as main
+        previous_token = main.token_response
+        main.token_response = None
+        try:
+            response = app.test_client().get("/data")
+            self.assertEqual(response.status_code, 401)
+        finally:
+            main.token_response = previous_token
